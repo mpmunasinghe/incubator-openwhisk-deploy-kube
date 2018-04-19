@@ -11,7 +11,7 @@ couchdbHealthCheck () {
 
   PASSED=false
   TIMEOUT=0
-  until [ $TIMEOUT -eq 60 ]; do
+  until [ $TIMEOUT -eq $TIMEOUT_STEP_LIMIT ]; do
     if [ -n "$(kubectl -n openwhisk logs $POD_NAME | grep "successfully setup and configured CouchDB")" ]; then
       PASSED=true
       break
@@ -39,7 +39,7 @@ deploymentHealthCheck () {
 
   PASSED=false
   TIMEOUT=0
-  until $PASSED || [ $TIMEOUT -eq 60 ]; do
+  until $PASSED || [ $TIMEOUT -eq $TIMEOUT_STEP_LIMIT ]; do
     KUBE_DEPLOY_STATUS=$(kubectl -n openwhisk get pods -l name="$1" -o wide | grep "$1" | awk '{print $3}')
     if [ "$KUBE_DEPLOY_STATUS" == "Running" ]; then
       PASSED=true
@@ -70,7 +70,7 @@ statefulsetHealthCheck () {
 
   PASSED=false
   TIMEOUT=0
-  until $PASSED || [ $TIMEOUT -eq 60 ]; do
+  until $PASSED || [ $TIMEOUT -eq $TIMEOUT_STEP_LIMIT ]; do
     KUBE_DEPLOY_STATUS=$(kubectl -n openwhisk get pods -l name="$1" -o wide | grep "$1"-0 | awk '{print $3}')
     if [ "$KUBE_DEPLOY_STATUS" == "Running" ]; then
       PASSED=true
@@ -102,7 +102,7 @@ jobHealthCheck () {
 
   PASSED=false
   TIMEOUT=0
-  until $PASSED || [ $TIMEOUT -eq 60 ]; do
+  until $PASSED || [ $TIMEOUT -eq $TIMEOUT_STEP_LIMIT ]; do
     KUBE_SUCCESSFUL_JOB=$(kubectl -n openwhisk get jobs -o wide | grep "$1" | awk '{print $3}')
     if [ "$KUBE_SUCCESSFUL_JOB" == "1" ]; then
       PASSED=true
@@ -138,6 +138,9 @@ ROOTDIR="$SCRIPTDIR/../../"
 # Default to docker container factory if not specified
 OW_CONTAINER_FACTORY=${OW_CONTAINER_FACTORY:="docker"}
 
+# Default timeout limit to 60 steps
+TIMEOUT_STEP_LIMIT=${TIMEOUT_STEP_LIMIT:=60}
+
 cd $ROOTDIR
 
 # Label invoker nodes (needed for DockerContainerFactory-based invoker deployment)
@@ -159,6 +162,7 @@ pushd kubernetes/cluster-setup
   fi
   kubectl -n openwhisk create cm whisk.limits --from-env-file=limits.env
   kubectl -n openwhisk create secret generic whisk.auth --from-file=system=auth.whisk.system --from-file=guest=auth.guest
+  kubectl apply -f persistent-volumes.yml
 popd
 
 # configure Ingress and wsk CLI
