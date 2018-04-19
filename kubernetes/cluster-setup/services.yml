@@ -10,19 +10,17 @@ metadata:
   labels:
     name: nginx
 spec:
-  type: NodePort
+  type: LoadBalancer
   selector:
     name: nginx
   ports:
     - port: 80
-      targetPort: 80
       name: http
     - port: 443
-      targetPort: 443
       name: https-api
     - port: 8443
-      targetPort: 8443
       name: https-admin
+  loadBalancerIP: {load-balancer-static-ip}
 ---
 apiVersion: v1
 kind: Service
